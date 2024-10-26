@@ -2,7 +2,7 @@
 Page({
   data: {
     inputValue: '',
-    chatHistory: [],
+    chatHistory: [], // 只在内存中保存对话记录
     loading: false,
     recording: false
   },
@@ -46,9 +46,14 @@ Page({
     
     const userMessage = this.data.inputValue
     
+    // 添加用户消息到对话记录
     this.setData({
       inputValue: '',
-      loading: true
+      loading: true,
+      chatHistory: [...this.data.chatHistory, {
+        role: 'user',
+        content: userMessage
+      }]
     })
 
     try {
@@ -66,9 +71,13 @@ Page({
         throw new Error(result.result.error)
       }
 
-      // 刷新消息历史
-      await this.loadHistory()
-      console.log('历史消息已更新')
+      // 添加AI回复到对话记录
+      this.setData({
+        chatHistory: [...this.data.chatHistory, {
+          role: 'assistant',
+          content: result.result.reply
+        }]
+      })
       
     } catch (error) {
       console.error('发送消息失败:', error)

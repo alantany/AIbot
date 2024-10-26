@@ -11,9 +11,6 @@ cloud.init({
   env: cloud.DYNAMIC_CURRENT_ENV
 })
 
-// 初始化数据库
-const db = cloud.database()
-
 exports.main = async (event, context) => {
   console.log('开始调用Kimi API...')
   console.log('收到的完整参数:', event)
@@ -51,33 +48,12 @@ exports.main = async (event, context) => {
     })
     
     console.log('聊天请求响应:', {
-      status: response.status,
-      headers: response.headers
+      status: response.status
     })
 
-    const reply = response.data.choices[0].message.content
-
-    // 保存用户消息到数据库
-    await db.collection('chat_history').add({
-      data: {
-        role: 'user',
-        content: event.message,
-        timestamp: Date.now()
-      }
-    })
-
-    // 保存AI回复到数据库
-    await db.collection('chat_history').add({
-      data: {
-        role: 'assistant',
-        content: reply,
-        timestamp: Date.now()
-      }
-    })
-    
     return {
       success: true,
-      reply: reply
+      reply: response.data.choices[0].message.content
     }
     
   } catch (error) {
