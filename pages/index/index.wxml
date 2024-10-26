@@ -1,0 +1,34 @@
+<view class="container">
+  <scroll-view class="chat-container" scroll-y scroll-into-view="msg-{{chatHistory.length-1}}">
+    <block wx:for="{{chatHistory}}" wx:key="_id">
+      <view id="msg-{{index}}" class="message {{item.role === 'user' ? 'user' : 'assistant'}}">
+        <view class="message-content">{{item.content}}</view>
+      </view>
+    </block>
+    <view class="loading" wx:if="{{loading}}">
+      <text>正在思考中...</text>
+    </view>
+  </scroll-view>
+  
+  <view class="input-container">
+    <button class="voice-btn" bindtouchstart="startRecord" bindtouchend="stopRecord">
+      <text class="voice-icon">🎤</text>
+    </button>
+    <input class="input" 
+           value="{{inputValue}}" 
+           bindinput="onInput"
+           placeholder="请输入您的问题"
+           confirm-type="send"
+           bindconfirm="sendMessage"
+    />
+    <button class="send-btn" 
+            bindtap="sendMessage" 
+            disabled="{{!inputValue || loading}}">
+      发送
+    </button>
+  </view>
+
+  <view class="developer-info">
+    Developed by Huaiyuan Tan
+  </view>
+</view>
