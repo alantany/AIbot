@@ -5,13 +5,7 @@
   "window": {
     "backgroundTextStyle": "light",
     "navigationBarBackgroundColor": "#fff",
-    "navigationBarTitleText": "AI机器人",
+    "navigationBarTitleText": "AI新闻播报员",
     "navigationBarTextStyle": "black"
-  },
-  "cloud": true,
-  "permission": {
-    "scope.record": {
-      "desc": "需要使用您的录音功能"
-    }
   }
-}
+} 

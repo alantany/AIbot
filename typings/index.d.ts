@@ -5,4 +5,4 @@ interface IAppOption {
     userInfo?: WechatMiniprogram.UserInfo,
   }
   userInfoReadyCallback?: WechatMiniprogram.GetUserInfoSuccessCallback,
-}
+} 

@@ -1,34 +1,37 @@
 {
-  "description": "AI机器人对话小程序",
-  "packOptions": {
-    "ignore": [],
-    "include": []
-  },
-  "miniprogramRoot": "",
+  "description": "AI新闻播报员",
+  "miniprogramRoot": "miniprogram/",
   "compileType": "miniprogram",
-  "projectname": "ai-robot",
+  "projectname": "ai-news-reporter",
   "setting": {
     "useCompilerPlugins": [
-      "sass",
       "typescript"
     ],
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "minified": true,
+    "ignoreUploadUnusedFiles": true,
     "babelSetting": {
       "ignore": [],
       "disablePlugins": [],
       "outputPath": ""
     },
-    "ignoreUploadUnusedFiles": true
+    "condition": false,
+    "packNpmManually": false,
+    "packNpmRelationList": []
   },
-  "simulatorType": "wechat",
-  "simulatorPluginLibVersion": {},
-  "condition": {},
-  "srcMiniprogramRoot": "",
   "appid": "wx1a8f25f96c7c4be0",
-  "libVersion": "2.32.3",
+  "libVersion": "2.30.2",
+  "srcMiniprogramRoot": "miniprogram/",
+  "packOptions": {
+    "ignore": [],
+    "include": []
+  },
+  "condition": {},
   "editorSetting": {
     "tabIndent": "insertSpaces",
     "tabSize": 2
   },
-  "cloudfunctionTemplateRoot": "cloudfunctionTemplate/",
   "cloudfunctionRoot": "cloudfunctions/"
 }

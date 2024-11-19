@@ -1,28 +1,62 @@
 <!--index.wxml-->
-<navigation-bar title="Weixin" back="{{false}}" color="black" background="#FFF"></navigation-bar>
-<scroll-view class="scrollarea" scroll-y type="list">
-  <view class="container">
-    <view class="userinfo">
-      <block wx:if="{{canIUseNicknameComp && !hasUserInfo}}">
-        <button class="avatar-wrapper" open-type="chooseAvatar" bind:chooseavatar="onChooseAvatar">
-          <image class="avatar" src="{{userInfo.avatarUrl}}"></image>
-        </button>
-        <view class="nickname-wrapper">
-          <text class="nickname-label">昵称</text>
-          <input type="nickname" class="nickname-input" placeholder="请输入昵称" bind:change="onInputChange" />
+<view class="container">
+  <!-- 机器人头像 -->
+  <view class="robot-container">
+    <view class="robot">
+      <view class="antenna"></view>
+      <view class="head">
+        <view class="eyes">
+          <view class="eye left">
+            <view class="pupil"></view>
+          </view>
+          <view class="eye right">
+            <view class="pupil"></view>
+          </view>
         </view>
-      </block>
-      <block wx:elif="{{!hasUserInfo}}">
-        <button wx:if="{{canIUseGetUserProfile}}" bindtap="getUserProfile"> 获取头像昵称 </button>
-        <view wx:else> 请使用2.10.4及以上版本基础库 </view>
-      </block>
-      <block wx:else>
-        <image bindtap="bindViewTap" class="userinfo-avatar" src="{{userInfo.avatarUrl}}" mode="cover"></image>
-        <text class="userinfo-nickname">{{userInfo.nickName}}</text>
-      </block>
+        <view class="mouth" animation="{{mouthAnimation}}">
+          <view class="mouth-line"></view>
+        </view>
+      </view>
     </view>
-    <view class="usermotto">
-      <text class="user-motto">{{motto}}</text>
-    </view>
+    <!-- 阴影效果 -->
+    <view class="robot-shadow"></view>
   </view>
-</scroll-view>
+
+  <!-- 新闻内容卡片 -->
+  <view class="news-card">
+    <text class="news-content">{{displayedNews || '请选择新闻类型开始收听...'}}</text>
+  </view>
+
+  <!-- 控制按钮组 -->
+  <view class="control-group">
+    <button class="control-btn next-btn" 
+            bindtap="playNextNews" 
+            disabled="{{!newsType || isPlaying}}">
+      下一条
+    </button>
+    <button class="control-btn play-btn {{isContinuousPlay ? 'playing' : ''}}" 
+            bindtap="toggleContinuousPlay"
+            disabled="{{!newsType || isPlaying}}">
+      {{isContinuousPlay ? '停止播放' : '持续播放'}}
+    </button>
+  </view>
+
+  <!-- 新闻分类按钮 - 移到底部 -->
+  <view class="category-tabs">
+    <button class="tab-btn {{newsType === 'domestic' ? 'active' : ''}}" 
+            bindtap="playDomesticNews" 
+            disabled="{{isPlaying}}">
+      国内新闻
+    </button>
+    <button class="tab-btn {{newsType === 'international' ? 'active' : ''}}" 
+            bindtap="playInternationalNews" 
+            disabled="{{isPlaying}}">
+      国际新闻
+    </button>
+  </view>
+
+  <!-- 开发者信息 -->
+  <view class="developer-info">
+    开发者：谭怀远
+  </view>
+</view>

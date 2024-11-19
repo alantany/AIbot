@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "openapi": [
+      "customerServiceMessage.uploadTempMedia"
+    ],
+    "cloud": {
+      "uploadFile": true,
+      "downloadFile": true,
+      "deleteFile": true
+    }
+  }
+} 

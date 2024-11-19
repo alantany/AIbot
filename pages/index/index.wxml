@@ -1,34 +1,22 @@
 <view class="container">
-  <scroll-view class="chat-container" scroll-y scroll-into-view="msg-{{chatHistory.length-1}}">
-    <block wx:for="{{chatHistory}}" wx:key="_id">
-      <view id="msg-{{index}}" class="message {{item.role === 'user' ? 'user' : 'assistant'}}">
-        <view class="message-content">{{item.content}}</view>
-      </view>
-    </block>
-    <view class="loading" wx:if="{{loading}}">
-      <text>正在思考中...</text>
+  <!-- 卡通头像 -->
+  <view class="avatar">
+    <!-- 眼睛 -->
+    <view class="eyes">
+      <view class="eye"></view>
+      <view class="eye"></view>
     </view>
-  </scroll-view>
-  
-  <view class="input-container">
-    <button class="voice-btn" bindtouchstart="startRecord" bindtouchend="stopRecord">
-      <text class="voice-icon">🎤</text>
-    </button>
-    <input class="input" 
-           value="{{inputValue}}" 
-           bindinput="onInput"
-           placeholder="请输入您的问题"
-           confirm-type="send"
-           bindconfirm="sendMessage"
-    />
-    <button class="send-btn" 
-            bindtap="sendMessage" 
-            disabled="{{!inputValue || loading}}">
-      发送
-    </button>
+    <!-- 嘴巴 -->
+    <view class="mouth" animation="{{mouthAnimation}}"></view>
   </view>
 
-  <view class="developer-info">
-    Developed by Huaiyuan Tan
+  <!-- 新闻文本 -->
+  <view class="news-box">
+    <text>{{displayedNews}}</text>
   </view>
-</view>
+
+  <!-- 控制按钮 -->
+  <button class="play-btn" bindtap="togglePlayPause">
+    {{isPlaying ? '暂停' : '播放'}}
+  </button>
+</view> 
