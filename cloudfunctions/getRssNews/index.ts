@@ -22,18 +22,25 @@ export async function main(event: any) {
     
     // 解析XML
     const result = await new Promise((resolve, reject) => {
-      xml2js.parseString(xmlData, (err, result) => {
+      xml2js.parseString(xmlData, {
+        explicitArray: false,  // 不要将单个元素转换为数组
+        mergeAttrs: true      // 合并属性
+      }, (err, result) => {
         if (err) reject(err)
         else resolve(result)
       })
     })
     
-    // 提取新闻条目
-    const items = result.rss.channel[0].item.map(item => ({
-      title: item.title[0],
-      description: item.description[0],
-      pubDate: item.pubDate[0]
+    // 提取新闻条目，包括完整内容
+    const items = result.rss.channel.item.map(item => ({
+      title: item.title,
+      description: item.description,
+      content: item['content:encoded'] || item.description,  // 尝试获取完整内容
+      pubDate: item.pubDate,
+      link: item.link
     }))
+    
+    console.log('RSS新闻条目:', items)
     
     return {
       success: true,

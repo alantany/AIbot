@@ -30,27 +30,23 @@
   <!-- 控制按钮组 -->
   <view class="control-group">
     <button class="control-btn next-btn" 
-            bindtap="playNextNews" 
-            disabled="{{!newsType || isPlaying}}">
+            bindtap="playNextNews">
       下一条
     </button>
     <button class="control-btn play-btn {{isContinuousPlay ? 'playing' : ''}}" 
-            bindtap="toggleContinuousPlay"
-            disabled="{{!newsType || isPlaying}}">
+            bindtap="toggleContinuousPlay">
       {{isContinuousPlay ? '停止播放' : '持续播放'}}
     </button>
   </view>
 
-  <!-- 新闻分类按钮 - 移到底部 -->
+  <!-- 新闻分类按钮 -->
   <view class="category-tabs">
     <button class="tab-btn {{newsType === 'domestic' ? 'active' : ''}}" 
-            bindtap="playDomesticNews" 
-            disabled="{{isPlaying}}">
+            bindtap="playDomesticNews">
       国内新闻
     </button>
     <button class="tab-btn {{newsType === 'international' ? 'active' : ''}}" 
-            bindtap="playInternationalNews" 
-            disabled="{{isPlaying}}">
+            bindtap="playInternationalNews">
       国际新闻
     </button>
   </view>

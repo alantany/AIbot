@@ -16,6 +16,7 @@ declare const requirePlugin: (name: string) => {
 interface NewsItem {
   id: string
   title: string
+  content: string
   ctime: string
 }
 
@@ -47,9 +48,10 @@ interface IPageData extends WechatMiniprogram.IData {
     domestic: string[]
     international: string[]
   }
+  newsLoading: boolean
 }
 
-// 添加新闻记录管理
+// 添加新记录管理
 const NEWS_STORAGE_KEY = 'played_news'
 const STORAGE_DAYS = 3  // 保存3天的记录
 
@@ -93,7 +95,7 @@ const utils = {
     const nonce = Math.random().toString(36).substring(7)
     const signStr = `${message}${timestamp}${nonce}${secret}`
     
-    // 生成一个简单的hash
+    // ��成一个简单的hash
     let hash = 0
     for (let i = 0; i < signStr.length; i++) {
       const char = signStr.charCodeAt(i)
@@ -104,6 +106,29 @@ const utils = {
     // 转换为base64
     return this.base64Encode(hash.toString())
   }
+}
+
+// 添加重试函数
+async function retryOperation<T>(
+  operation: () => Promise<T>,
+  maxRetries: number = 3,
+  delay: number = 1000
+): Promise<T> {
+  let lastError: any
+  
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await operation()
+    } catch (error) {
+      console.log(`尝试第 ${i + 1} 次失败:`, error)
+      lastError = error
+      if (i < maxRetries - 1) {
+        await new Promise(resolve => setTimeout(resolve, delay))
+      }
+    }
+  }
+  
+  throw lastError
 }
 
 Page<IPageData>({
@@ -132,23 +157,24 @@ Page<IPageData>({
     playedNewsIds: {
       domestic: [],
       international: []
-    }
+    },
+    newsLoading: false
   },
 
-  // 预加载新闻的数量
+  // 预加载新闻的数
   BUFFER_SIZE: 50,
   MAX_PLAYED_IDS: 1000,
 
-  // 修改新闻源配置，添加分页参数
+  // 修改新闻源配置
   apiConfig: {
-    domestic: 'https://feed.mix.sina.com.cn/api/roll/get?pageid=153&lid=2510&num=50&page=',
-    international: 'https://feed.mix.sina.com.cn/api/roll/get?pageid=153&lid=2514&num=50&page='
+    domestic: `https://feed.mix.sina.com.cn/api/roll/get?pageid=153&lid=2510&k=&num=100&page=1&r=${Math.random()}&_=${Date.now()}`,
+    international: `https://feed.mix.sina.com.cn/api/roll/get?pageid=153&lid=2514&k=&num=100&page=1&r=${Math.random()}&_=${Date.now()}`
   },
 
   animation: null as WechatMiniprogram.Animation | null,
   audioContext: null as any,
 
-  // 讯飞语音合成配置
+  // 飞语音合成配置
   ttsConfig: {
     appId: '92106442',  // 你的讯飞APPID
     apiSecret: 'ZjY2NGQ5OWZmY2Y0OGQ1NDRjMzViOGFl',  // 你的APISecret
@@ -181,7 +207,7 @@ Page<IPageData>({
     })
     this.audioContext = wx.createInnerAudioContext()
     
-    // 加载并清理过期的播放记录
+    // 加载并清理过期的记录
     this.loadAndCleanPlayedNews()
   },
 
@@ -222,7 +248,7 @@ Page<IPageData>({
         type
       })
       
-      // 更新存储
+      // 新存储
       wx.setStorageSync(NEWS_STORAGE_KEY, playedNews)
       
       // 更新 Set
@@ -244,62 +270,68 @@ Page<IPageData>({
     international: [
       "全球气候变化会议达成新共识，各国承诺减排",
       "国际科技合作项目取得突破性进展",
-      "世界经济论坛关注AI发展，呼吁加强国际合作",
-      "太空探索获得新发现，火星探测任务传回重要数据",
-      "全球卫生组织发布最新研究报告"
+      "世界经济论坛关注AI展，呼吁加强国际合作",
+      "太空探索获得新发现，星探测任务传回重要数",
+      "全卫生组织发布最新研究报告"
     ]
   },
 
-  // 修改获取新闻函数
-  async fetchNews(type: 'domestic' | 'international'): Promise<string | null> {
+  // 修改获取新数
+  async fetchNews(type: 'domestic' | 'international'): Promise<{title: string, content: string} | null> {
     try {
-      // 如果缓冲区为空或只剩少量新闻，则获取新的新闻
+      console.log('开始获取新闻, 类型:', type)
+      
       if (this.data.newsBuffer[type].length < 5) {
         wx.showLoading({ title: '获取新闻中...' })
-        const response = await new Promise<any>((resolve, reject) => {
-          wx.request({
-            url: `${this.apiConfig[type]}${this.data.currentPage[type]}`,
-            method: 'GET',
-            data: {
-              num: this.BUFFER_SIZE
-            },
-            success: resolve,
-            fail: reject
-          })
+        
+        const result = await wx.cloud.callFunction({
+          name: 'getNews',
+          data: { type }
         })
+        
         wx.hideLoading()
 
-        if (response.statusCode === 200 && response.data.result && response.data.result.data) {
-          const newsList = response.data.result.data
-            .map((news: any) => ({
-              id: news.id,
-              title: news.title
-                .replace(/[\[\]【】]/g, '')
-                .split('（')[0]
-                .split('|')[0]
+        if (result.result.code === 0 && result.result.data) {
+          const newsItems = result.result.data
+          
+          // 过滤和处理新闻
+          const processedNews = newsItems
+            .map((item: any) => ({
+              id: item.id,
+              title: this.decodeXMLEntities(item.title).trim(),
+              content: this.decodeXMLEntities(item.content)
+                .replace(/<[^>]+>/g, '') // 移除HTML标签
                 .trim(),
-              ctime: news.ctime
+              ctime: new Date(item.ctime).toLocaleString('zh-CN')
             }))
-            .sort((a: NewsItem, b: NewsItem) => 
-              new Date(b.ctime).getTime() - new Date(a.ctime).getTime()
+            .filter((item: any) => 
+              item.title && 
+              item.content && 
+              !this.playedNewsIds.has(item.id)
             )
 
-          // 更新缓冲区，追加新的新闻
-          this.setData({
-            [`newsBuffer.${type}`]: [...this.data.newsBuffer[type], ...newsList],
-            [`currentPage.${type}`]: this.data.currentPage[type] + 1
-          })
+          if (processedNews.length > 0) {
+            this.setData({
+              [`newsBuffer.${type}`]: [...this.data.newsBuffer[type], ...processedNews]
+            })
+          }
         }
       }
 
-      // 从缓冲区取出最新的一条新闻
+      // 从缓冲区获取一条新闻
       const news = this.data.newsBuffer[type].shift()
       if (news) {
-        // 更新缓冲区
+        // 记录已播放
+        this.recordPlayedNews(news.id, type)
+        
         this.setData({
           [`newsBuffer.${type}`]: this.data.newsBuffer[type]
         })
-        return news.title
+        
+        return {
+          title: news.title,
+          content: news.content
+        }
       }
 
       return null
@@ -308,6 +340,17 @@ Page<IPageData>({
       wx.hideLoading()
       return null
     }
+  },
+
+  // 添加 XML 实体解码函数
+  decodeXMLEntities(text: string): string {
+    return text
+      .replace(/&quot;/g, '"')
+      .replace(/&apos;/g, "'")
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&')
+      .replace(/&#?\w+;/g, '')  // 移除其他 XML 实体
   },
 
   // 持续播放新闻
@@ -328,13 +371,58 @@ Page<IPageData>({
     this.stopSpeaking()
   },
 
+  // 修改 stopCurrentPlay 方法
+  async stopCurrentPlay() {
+    return new Promise<void>((resolve) => {
+      // 停止文字动画
+      if (this.textTimer) {
+        clearInterval(this.textTimer)
+        this.textTimer = undefined
+      }
+      
+      // 停止嘴部动画
+      if (this.mouthTimer) {
+        clearInterval(this.mouthTimer)
+        this.mouthTimer = undefined
+      }
+      
+      // 停止语音
+      if (this.audioContext) {
+        this.audioContext.stop()
+        this.audioContext.destroy()
+        this.audioContext = null
+      }
+      
+      // 重置动画状态
+      if (this.animation) {
+        this.animation
+          .scale(1, 1)
+          .step({ duration: 100 })
+        this.setData({
+          mouthAnimation: this.animation.export()
+        })
+      }
+      
+      // 重置状态
+      this.setData({ 
+        isPlaying: false,
+        isContinuousPlay: false,
+        displayedNews: this.data.currentNews // 显示完整文本
+      }, () => {
+        // 确保状态更新完成后再继续
+        setTimeout(resolve, 100)
+      })
+    })
+  },
+
   // 修改播放下一条方法
   async playNextNews() {
-    if (this.data.isPlaying || !this.data.newsType) return
-
     try {
+      // 先停止当前播放
+      await this.stopCurrentPlay()
+      
       this.setData({
-        isPlaying: true  // 设置播放状态
+        isPlaying: true
       })
 
       wx.showLoading({ title: '获取新闻中...' })
@@ -342,23 +430,23 @@ Page<IPageData>({
       wx.hideLoading()
 
       if (news) {
-        const newsText = `${this.data.newsType === 'domestic' ? '国内' : '国际'}新闻：${news}`
+        // 显示标题
+        const displayText = `${this.data.newsType === 'domestic' ? '国内' : '国际'}新闻：${news.title}`
         this.setData({ 
-          currentNews: newsText,
+          currentNews: displayText,
           displayedNews: "",
           charIndex: 0
         })
         
         this.startAnimation()
-        await this.startSpeaking(news)  // 等待语音播放完成
+        // 朗读完整新闻：标题 + 内容
+        const fullText = `${news.title}。${news.content}`
+        await this.startSpeaking(fullText)
         
-        // 语音播放完成后的处理
         this.setData({ isPlaying: false })
         
-        // 如果是连续播放模式，等待后再播放下一条
         if (this.data.isContinuousPlay) {
           await new Promise(resolve => setTimeout(resolve, 1000))
-          // 直接调用 playNextNews，不再通过 onPlayComplete
           await this.playNextNews()
         }
       } else {
@@ -396,27 +484,35 @@ Page<IPageData>({
     }
   },
 
-  // 开始播报
+  // 修改开始播报函数
   startSpeaking(text: string): Promise<void> {
     return new Promise((resolve, reject) => {
       try {
-        // 将文本按句号分段
-        const newsContent = text
-        const segments = newsContent.split(/([。！？])/).filter(Boolean).reduce((acc, cur, i, arr) => {
-          if (i === 0) {
-            acc.push(cur + (arr[i + 1] || ''))
-          } else if (i % 2 === 0) {
-            acc.push(cur + (arr[i + 1] || ''))
-          }
-          return acc
-        }, [] as string[])
+        // 1. 处理文本，移除所有标点符号，保留必要的空格
+        let processedText = text
+          .replace(/["""]([^"""]*)["'"]/g, '$1')  // 移除引号
+          .replace(/[。！？：；、]/g, ' ')       // 将标点符号替换为空格
+          .replace(/\s+/g, ' ')                    // 将多个空格合并为一
+          .replace(/\n+/g, ' ')                    // 将换行替换为空格
+          .trim()
+
+        // 2. 将文本按照合适的长度分段每段大约100-150个字）
+        const maxLength = 150
+        const segments = []
+        let start = 0
+        
+        while (start < processedText.length) {
+          let end = Math.min(start + maxLength, processedText.length)
+          segments.push(processedText.slice(start, end))
+          start = end
+        }
         
         console.log('分段结果:', segments)
         
-        // 播放所有段落并等待完成
+        // 3. 播放所有段落
         this.playSegments(segments, 0)
           .then(() => {
-            console.log('所有段落播放完成')
+            console.log('播放完成')
             this.stopMouthAnimation()
             resolve()
           })
@@ -440,12 +536,15 @@ Page<IPageData>({
 
   // 修改播放国内新闻方法
   async playDomesticNews() {
-    if (this.data.isPlaying) return
+    // 先停止当前播放
+    await this.stopCurrentPlay()
     
     this.setData({ 
       newsType: 'domestic',
-      currentPage: 1,
-      isContinuousPlay: false  // 重置连续播放状态
+      currentPage: {
+        domestic: 1,
+        international: this.data.currentPage.international
+      }
     })
     
     await this.playNextNews()
@@ -453,12 +552,15 @@ Page<IPageData>({
 
   // 修改播放国际新闻方法
   async playInternationalNews() {
-    if (this.data.isPlaying) return
+    // 先停止当前播放
+    await this.stopCurrentPlay()
     
     this.setData({ 
       newsType: 'international',
-      currentPage: 1,
-      isContinuousPlay: false  // 重置连续播放状态
+      currentPage: {
+        domestic: this.data.currentPage.domestic,
+        international: 1
+      }
     })
     
     await this.playNextNews()
@@ -472,8 +574,17 @@ Page<IPageData>({
     }
 
     return new Promise((resolve, reject) => {
+      // 如果不在播放状态，直接结束
+      if (!this.data.isPlaying) {
+        resolve()
+        return
+      }
+
       const plugin = requirePlugin("WechatSI")
       const audio = wx.createInnerAudioContext()
+      
+      // 保存当前音频实例以便停止
+      this.audioContext = audio
       
       plugin.textToSpeech({
         lang: "zh_CN",
@@ -483,6 +594,13 @@ Page<IPageData>({
           audio.src = res.filename
           
           audio.onPlay(() => {
+            // 检查是否仍在播放状态
+            if (!this.data.isPlaying) {
+              audio.stop()
+              audio.destroy()
+              resolve()
+              return
+            }
             console.log(`第${index + 1}段开始播放:`, segments[index])
             this.startMouthAnimation()
           })
@@ -492,12 +610,16 @@ Page<IPageData>({
             this.stopMouthAnimation()
             audio.destroy()
             
-            // 播放下一段
-            setTimeout(() => {
-              this.playSegments(segments, index + 1)
-                .then(resolve)
-                .catch(reject)
-            }, 300)
+            // 检查是否仍在播放状态
+            if (this.data.isPlaying) {
+              setTimeout(() => {
+                this.playSegments(segments, index + 1)
+                  .then(resolve)
+                  .catch(reject)
+              }, 50)
+            } else {
+              resolve()
+            }
           })
 
           audio.onError((err) => {
@@ -537,6 +659,10 @@ Page<IPageData>({
   onUnload() {
     this.stopAnimation()
     this.stopSpeaking()
+    // 页面卸载清理音频上下文
+    if (this.data.audioContext) {
+      this.data.audioContext.destroy()
+    }
   },
 
   // 播放单条新闻
@@ -574,7 +700,7 @@ Page<IPageData>({
     });
   },
 
-  // 切换连续播放状态
+  // 切换连续播状态
   toggleContinuousPlay() {
     const newState = !this.data.isContinuousPlay
     
@@ -590,20 +716,13 @@ Page<IPageData>({
     }
   },
 
-  onUnload() {
-    // 页面卸载时清理音频上下文
-    if (this.data.audioContext) {
-      this.data.audioContext.destroy();
-    }
-  },
-
-  // 修改开始嘴部动画方法
+  // 修改开始嘴部动画法
   startMouthAnimation() {
     if (!this.animation) return
     
     // 创建定时器实现嘴巴一张一合的动画
     this.mouthTimer = setInterval(() => {
-      // 张嘴
+      // 嘴
       this.animation
         .scale(1, 0.5)
         .step({ duration: 100 })
@@ -634,5 +753,31 @@ Page<IPageData>({
     this.setData({
       mouthAnimation: this.animation.export()
     })
+  },
+
+  async getNews(type: string) {
+    this.setData({ newsLoading: true })
+    
+    try {
+      const result = await wx.cloud.callFunction({
+        name: 'getNews',
+        data: { type }
+      })
+      
+      if(result.result.code === 0) {
+        // 处理新闻数据
+        const newsData = result.result.data
+        // TODO: 更新UI显示
+      } else {
+        throw new Error(result.result.error)
+      }
+    } catch(error) {
+      wx.showToast({
+        title: '获取新闻失败',
+        icon: 'none'
+      })
+    } finally {
+      this.setData({ newsLoading: false })
+    }
   }
 })

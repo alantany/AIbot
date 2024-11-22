@@ -51,6 +51,8 @@ declare namespace WechatMiniprogram {
     icon?: 'success' | 'loading' | 'none'
     duration?: number
   }
+
+  interface InnerAudioContext extends InnerAudioContext {}
 }
 
 interface RequestOption<T = any> {
@@ -77,6 +79,8 @@ declare const wx: {
   showLoading(options: { title: string }): void
   hideLoading(): void
   createInnerAudioContext(): InnerAudioContext
+  getStorageSync(key: string): any
+  setStorageSync(key: string, data: any): void
 }
 
 interface InnerAudioContext {

@@ -1,0 +1,16 @@
+{
+  "name": "getArticleContent",
+  "version": "1.0.0",
+  "description": "获取今日头条文章内容",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "wx-server-sdk": "latest",
+    "axios": "^1.6.2",
+    "cheerio": "^1.0.0-rc.12"
+  }
+} 
